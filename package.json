@@ -9,6 +9,7 @@
     "npm": "9"
   },
   "scripts": {
+    "gcp-build": "",
     "preinstall": "npx check-node-version --package",
     "prebuild": "rm -rf dist",
     "build": "nx run core:build",
