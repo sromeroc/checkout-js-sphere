@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { FunctionComponent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
     PaymentMethodProps,
@@ -8,6 +8,14 @@ import {
 import { DynamicFormField, DynamicFormFieldType, FormContext } from '@bigcommerce/checkout/ui';
 import { FormField } from '@bigcommerce/checkout-sdk';
 import getPaypalCommerceRatePayValidationSchema from './validation-schemas/getPaypalCommerceRatePayValidationSchema';
+import { LoadingSpinner } from '@bigcommerce/checkout/ui';
+import { CustomError } from '@bigcommerce/checkout/payment-integration-api';
+import { SpecificError } from '@bigcommerce/checkout/payment-integration-api';
+import { CountryData, getCountryData } from '@bigcommerce/checkout/payment-integration-api';
+
+const PAYMENT_SOURCE_INFO_CANNOT_BE_VERIFIED = 'PAYMENT_SOURCE_INFO_CANNOT_BE_VERIFIED';
+const PAYMENT_SOURCE_DECLINED_BY_PROCESSOR = 'PAYMENT_SOURCE_DECLINED_BY_PROCESSOR';
+const ITEM_CATEGORY_NOT_SUPPORTED_BY_PAYMENT_SOURCE = 'ITEM_CATEGORY_NOT_SUPPORTED_BY_PAYMENT_SOURCE';
 
 interface RatePayFieldValues {
     ratepayBirthDate: {
@@ -27,6 +35,7 @@ const formFieldData: FormField[] = [
         label: 'payment.ratepay.birth_date',
         required: true,
         fieldType: DynamicFormFieldType.DATE,
+        inputDateFormat: 'dd.MM.yyyy',
     },
     {
         name: 'ratepayPhoneCountryCode',
@@ -36,7 +45,6 @@ const formFieldData: FormField[] = [
         required: true,
         fieldType: DynamicFormFieldType.TEXT,
         type: 'string',
-        maxLength: 2,
     },
     {
         name: 'ratepayPhoneNumber',
@@ -45,8 +53,6 @@ const formFieldData: FormField[] = [
         label: 'payment.ratepay.phone_number',
         required: true,
         fieldType: DynamicFormFieldType.TEXT,
-        maxLength: 11,
-        min: 8,
     }
 ];
 
@@ -66,6 +72,12 @@ const PaypalCommerceRatePayPaymentMethod: FunctionComponent<any> = ({
 }) => {
     const fieldsValues = useRef<Partial<RatePayFieldValues>>({});
     const isPaymentDataRequired = checkoutState.data.isPaymentDataRequired();
+    const [isPaymentSubmitting, setIsPaymentSubmitting] = useState(false);
+    const getCountryInfo = (): CountryData => {
+        const billing = checkoutState.data.getBillingAddress();
+
+        return getCountryData(billing.country)[0] || '';
+    };
 
     if (!isPaymentDataRequired) {
         return null;
@@ -80,8 +92,43 @@ const PaypalCommerceRatePayPaymentMethod: FunctionComponent<any> = ({
                     container: '#checkout-payment-continue',
                     legalTextContainer: 'legal-text-container',
                     getFieldsValues: () => fieldsValues.current,
-                    onError: (error: Error) => {
+                    onPaymentSubmission: (isSubmitting: boolean) => setIsPaymentSubmitting(isSubmitting),
+                    onError: (error: SpecificError) => {
                         paymentForm.disableSubmit(method, true);
+                        const ratepaySpecificError = error?.errors?.filter(e => e.provider_error);
+
+                        if (ratepaySpecificError?.length) {
+                            let translationCode;
+                            let ratepayError;
+                            const ratepaySpecificErrorCode = ratepaySpecificError[0].provider_error?.code;
+                            switch (ratepaySpecificErrorCode) {
+                                case PAYMENT_SOURCE_DECLINED_BY_PROCESSOR:
+                                    translationCode = 'payment.ratepay.errors.paymentSourceDeclinedByProcessor';
+                                    break;
+                                case PAYMENT_SOURCE_INFO_CANNOT_BE_VERIFIED:
+                                    translationCode = 'payment.ratepay.errors.paymentSourceInfoCannotBeVerified';
+                                    break;
+                                case ITEM_CATEGORY_NOT_SUPPORTED_BY_PAYMENT_SOURCE:
+                                    translationCode = 'payment.ratepay.errors.itemCategoryNotSupportedByPaymentSource';
+                                    break;
+                                default:
+                                    translationCode = 'common.error_heading';
+                            }
+
+                            if (ratepaySpecificErrorCode !== ITEM_CATEGORY_NOT_SUPPORTED_BY_PAYMENT_SOURCE) {
+                                ratepayError = new CustomError({
+                                    data: {
+                                        shouldBeTranslatedAsHtml: true,
+                                        translationKey: translationCode,
+                                    },
+                                });
+                            } else {
+                                ratepayError = new Error(language.translate(translationCode));
+                            }
+
+                            return onUnhandledError(ratepayError);
+                        }
+
                         onUnhandledError(error);
                     },
                 },
@@ -138,8 +185,17 @@ const PaypalCommerceRatePayPaymentMethod: FunctionComponent<any> = ({
         setValidationSchema(method, validationSchema);
     }, [validationSchema, method, setValidationSchema, setSubmitted]);
 
+    useEffect(() => {
+        setFieldValue('ratepayPhoneCountryCode', getCountryInfo().dialCode);
+    }, []);
+
     return (
         <div style={{marginBottom:'20px'}}>
+            { isPaymentSubmitting &&
+                <div className='embedded-checkout-loading-spinner-overlay'>
+                    <LoadingSpinner isLoading={true}/>
+                </div>
+            }
             <FormContext.Provider value={{ isSubmitted, setSubmitted }}>
                 { formFieldData.map((field) => {
                         return  <DynamicFormField

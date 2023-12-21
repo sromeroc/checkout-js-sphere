@@ -1,8 +1,10 @@
 import {
     BodlEventsPayload,
     BodlService,
+    BraintreeConnectTrackerService,
     CheckoutService,
     createBodlService,
+    createBraintreeConnectTracker,
     createStepTracker,
     StepTracker,
 } from '@bigcommerce/checkout-sdk';
@@ -23,6 +25,13 @@ const AnalyticsProvider = ({ checkoutService, children }: AnalyticsProviderProps
     );
     const getBodlService = useMemo(
         () => createAnalyticsService<BodlService>(createBodlService, [checkoutService.subscribe]),
+        [checkoutService],
+    );
+    const getBraintreeConnectTracker = useMemo(
+        () =>
+            createAnalyticsService<BraintreeConnectTrackerService>(createBraintreeConnectTracker, [
+                checkoutService,
+            ]),
         [checkoutService],
     );
 
@@ -59,14 +68,16 @@ const AnalyticsProvider = ({ checkoutService, children }: AnalyticsProviderProps
 
     const customerPaymentMethodExecuted = (payload: BodlEventsPayload) => {
         getBodlService().customerPaymentMethodExecuted(payload);
+        getBraintreeConnectTracker().customerPaymentMethodExecuted();
     };
 
     const showShippingMethods = () => {
         getBodlService().showShippingMethods();
     };
 
-    const selectedPaymentMethod = (methodName?: string) => {
+    const selectedPaymentMethod = (methodName: string, methodId: string) => {
         getBodlService().selectedPaymentMethod(methodName);
+        getBraintreeConnectTracker().selectedPaymentMethod(methodId);
     };
 
     const clickPayButton = (payload: BodlEventsPayload) => {
@@ -79,10 +90,15 @@ const AnalyticsProvider = ({ checkoutService, children }: AnalyticsProviderProps
 
     const paymentComplete = () => {
         getBodlService().paymentComplete();
+        getBraintreeConnectTracker().paymentComplete();
     };
 
     const exitCheckout = () => {
         getBodlService().exitCheckout();
+    };
+
+    const walletButtonClick = (methodId: string) => {
+        getBraintreeConnectTracker().walletButtonClick(methodId);
     };
 
     const analyticsTracker: AnalyticsEvents = {
@@ -100,6 +116,7 @@ const AnalyticsProvider = ({ checkoutService, children }: AnalyticsProviderProps
         paymentRejected,
         paymentComplete,
         exitCheckout,
+        walletButtonClick,
     };
 
     return (

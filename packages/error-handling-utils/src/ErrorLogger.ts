@@ -15,11 +15,17 @@ export default interface ErrorLogger {
 export interface ErrorLoggerOptions {
     errorTypes?: string[];
     publicPath?: string;
+    sampleRate?: number;
 }
 
 export interface ErrorLoggerServiceConfig {
-    sentry?: BrowserOptions;
+    sentry?: SentryConfig;
 }
+
+export type SentryConfig = Omit<
+    BrowserOptions,
+    'beforeSend' | 'integrations' | 'transport' | 'stackParser'
+>;
 
 export interface ErrorTags {
     /**

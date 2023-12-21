@@ -28,7 +28,7 @@ import {
     getPaymentFormServiceMock,
     getPaymentMethod,
     getStoreConfig,
-} from '@bigcommerce/checkout/test-utils';
+} from '@bigcommerce/checkout/test-mocks';
 
 import { HostedCreditCardFieldset } from './components';
 
@@ -395,6 +395,58 @@ describe('HostedCreditCardPaymentMethod', () => {
                         cardName: {
                             accessibilityLabel: 'Name on Card',
                             containerId: 'authorizenet-ccName',
+                        },
+                        cardNumber: {
+                            accessibilityLabel: 'Credit Card Number',
+                            containerId: 'authorizenet-ccNumber',
+                        },
+                    },
+                    styles: {
+                        default: expect.any(Object),
+                        error: expect.any(Object),
+                        focus: expect.any(Object),
+                    },
+                    onBlur: expect.any(Function),
+                    onCardTypeChange: expect.any(Function),
+                    onEnter: expect.any(Function),
+                    onFocus: expect.any(Function),
+                    onValidate: expect.any(Function),
+                },
+            },
+            gatewayId: undefined,
+            methodId: 'authorizenet',
+        });
+    });
+
+    it('does not pass card holder name field option when card name is not required', async () => {
+        const { language } = createLocaleContext(getStoreConfig());
+        const config = { ...getPaymentMethod().config, showCardHolderName: false };
+
+        defaultProps = {
+            method: { ...getPaymentMethod(), config },
+            checkoutService,
+            checkoutState,
+            paymentForm,
+            language,
+            onUnhandledError: jest.fn(),
+        };
+
+        mount(<HostedCreditCardPaymentMethodTest {...defaultProps} />);
+
+        await new Promise((resolve) => process.nextTick(resolve));
+
+        expect(initializePayment).toHaveBeenCalledWith({
+            creditCard: {
+                form: {
+                    fields: {
+                        cardCode: {
+                            accessibilityLabel: 'CVV',
+                            containerId: 'authorizenet-ccCvv',
+                        },
+                        cardExpiry: {
+                            accessibilityLabel: 'Expiration',
+                            containerId: 'authorizenet-ccExpiry',
+                            placeholder: 'MM / YY',
                         },
                         cardNumber: {
                             accessibilityLabel: 'Credit Card Number',

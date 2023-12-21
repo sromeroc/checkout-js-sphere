@@ -10,18 +10,19 @@ import React, { RefObject, useRef, useState } from 'react';
 import { lazy } from 'yup';
 
 import { TranslatedString, withLanguage, WithLanguageProps } from '@bigcommerce/checkout/locale';
+import { usePayPalConnectAddress } from '@bigcommerce/checkout/paypal-connect-integration';
 import { AddressFormSkeleton } from '@bigcommerce/checkout/ui';
 
 import {
     AddressForm,
     AddressFormValues,
     AddressSelect,
+    AddressType,
     getAddressFormFieldsValidationSchema,
     getTranslateAddressError,
     isValidCustomerAddress,
     mapAddressToFormValues,
 } from '../address';
-import { usePayPalConnectAddress } from '../address/PayPalAxo';
 import { getCustomFormFieldsValidationSchema } from '../formFields';
 import { OrderComments } from '../orderComments';
 import { Button, ButtonVariant } from '../ui/button';
@@ -98,11 +99,11 @@ const BillingForm = ({
             setIsResettingAddress(false);
         }
     };
-    
+
     const handleUseNewAddress = () => {
         handleSelectAddress({});
     };
-    
+
     return (
         <Form autoComplete="on">
             {shouldRenderStaticAddress && billingAddress && (
@@ -122,6 +123,7 @@ const BillingForm = ({
                                 selectedAddress={
                                     hasValidCustomerAddress ? billingAddress : undefined
                                 }
+                                type={AddressType.Billing}
                             />
                         </LoadingOverlay>
                     </Fieldset>

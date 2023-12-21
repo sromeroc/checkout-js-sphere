@@ -17,6 +17,15 @@
 
     > .AmazonPayContainer {
         width: remCalc(200px);
+        #amazonpayCheckoutButton > div{
+            width: 100% !important;
+        }
+    }
+
+    .gpay-button {
+        border-radius: $global-radius;
+        height: $wallet-button-height;
+        min-height: $wallet-button-height;
     }
 }
 
@@ -34,7 +43,6 @@
     background-size: 100% 60%;
     border-radius: $global-radius;
     height: $wallet-button-height;
-    padding: spacing('single');
 }
 
 .checkoutRemote-button {

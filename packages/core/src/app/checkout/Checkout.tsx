@@ -8,9 +8,9 @@ import {
     EmbeddedCheckoutMessenger,
     EmbeddedCheckoutMessengerOptions,
     FlashMessage,
+    PaymentMethod,
     Promotion,
-    RequestOptions,
-} from '@bigcommerce/checkout-sdk';
+ RequestOptions } from '@bigcommerce/checkout-sdk';
 import classNames from 'classnames';
 import { find, findIndex } from 'lodash';
 import React, { Component, lazy, ReactNode } from 'react';
@@ -35,6 +35,7 @@ import {
     CustomerSignOutEvent,
     CustomerViewType,
 } from '../customer';
+import { getSupportedMethodIds } from '../customer/getSupportedMethods';
 import { EmbeddedCheckoutStylesheet, isEmbedded } from '../embeddedCheckout';
 import { PromotionBannerList } from '../promotion';
 import { hasSelectedShippingOptions, isUsingMultiShipping, StaticConsignment } from '../shipping';
@@ -121,6 +122,7 @@ export interface CheckoutState {
     hasSelectedShippingOptions: boolean;
     isHidingStepNumbers: boolean;
     isSubscribed: boolean;
+    buttonConfigs: PaymentMethod[];
 }
 
 export interface WithCheckoutProps {
@@ -138,11 +140,11 @@ export interface WithCheckoutProps {
     loginUrl: string;
     cartUrl: string;
     createAccountUrl: string;
-    canCreateAccountInCheckout: boolean;
     promotions?: Promotion[];
     steps: CheckoutStepStatus[];
     clearError(error?: Error): void;
     loadCheckout(id: string, options?: RequestOptions<CheckoutParams>): Promise<CheckoutSelectors>;
+    loadPaymentMethodByIds(methodIds: string[]): Promise<CheckoutSelectors>;
     subscribeToConsignments(subscriber: (state: CheckoutSelectors) => void): () => void;
 }
 
@@ -162,6 +164,7 @@ class Checkout extends Component<
         hasSelectedShippingOptions: false,
         isHidingStepNumbers: true,
         isSubscribed: false,
+        buttonConfigs: [],
     };
 
     private embeddedMessenger?: EmbeddedCheckoutMessenger;
@@ -186,19 +189,33 @@ class Checkout extends Component<
             embeddedStylesheet,
             extensionService,
             loadCheckout,
+            loadPaymentMethodByIds,
             subscribeToConsignments,
-            isExtensionEnabled,
         } = this.props;
 
         try {
-            const { data } = await loadCheckout(checkoutId, {
+            const [{ data }] = await Promise.all([loadCheckout(checkoutId, {
                 params: {
                     include: [
                         'cart.lineItems.physicalItems.categoryNames',
                         'cart.lineItems.digitalItems.categoryNames',
                     ] as any, // FIXME: Currently the enum is not exported so it can't be used here.
                 },
-            });
+            }), extensionService.loadExtensions()]);
+
+            const providers = data.getConfig()?.checkoutSettings?.remoteCheckoutProviders || [];
+            const supportedProviders = getSupportedMethodIds(providers);
+
+            if (providers.length > 0) {
+                const configs = await loadPaymentMethodByIds(supportedProviders);
+
+                this.setState({
+                    buttonConfigs: configs.data.getPaymentMethods() || [],
+                });
+            }
+
+            extensionService.preloadExtensions();
+
             const { links: { siteLink = '' } = {} } = data.getConfig() || {};
             const errorFlashMessages = data.getFlashMessages('error') || [];
 
@@ -262,9 +279,6 @@ class Checkout extends Component<
 
             window.addEventListener('beforeunload', this.handleBeforeExit);
 
-            if (isExtensionEnabled()) {
-                await extensionService.loadExtensions();
-            }
         } catch (error) {
             if (error instanceof Error) {
                 this.handleUnhandledError(error);
@@ -320,11 +334,12 @@ class Checkout extends Component<
 
                     <PromotionBannerList promotions={promotions} />
 
-                    {isShowingWalletButtonsOnTop && (
+                    {isShowingWalletButtonsOnTop && this.state.buttonConfigs?.length > 0 && (
                         <CheckoutButtonContainer
                             checkEmbeddedSupport={this.checkEmbeddedSupport}
                             isPaymentStepActive={isPaymentStepActive}
                             onUnhandledError={this.handleUnhandledError}
+                            onWalletButtonClick={this.handleWalletButtonClick}
                         />
                     )}
 
@@ -403,6 +418,7 @@ class Checkout extends Component<
                     onSignInError={this.handleError}
                     onSubscribeToNewsletter={this.handleNewsletterSubscription}
                     onUnhandledError={this.handleUnhandledError}
+                    onWalletButtonClick={this.handleWalletButtonClick}
                     step={step}
                     viewType={customerViewType}
                 />
@@ -730,12 +746,9 @@ class Checkout extends Component<
     };
 
     private setCustomerViewType: (viewType: CustomerViewType) => void = (customerViewType) => {
-        const { canCreateAccountInCheckout, createAccountUrl } = this.props;
+        const { createAccountUrl } = this.props;
 
-        if (
-            customerViewType === CustomerViewType.CreateAccount &&
-            (!canCreateAccountInCheckout || isEmbedded())
-        ) {
+        if (customerViewType === CustomerViewType.CreateAccount && isEmbedded()) {
             if (window.top) {
                 window.top.location.replace(createAccountUrl);
             }
@@ -751,6 +764,12 @@ class Checkout extends Component<
         const { analyticsTracker } = this.props;
 
         analyticsTracker.exitCheckout();
+    }
+
+    private handleWalletButtonClick: (methodName: string) => void = (methodName) => {
+        const { analyticsTracker } = this.props;
+
+        analyticsTracker.walletButtonClick(methodName);
     }
 }
 

@@ -20,7 +20,7 @@ export default memoize(function getPaypalCommerceRatePayValidationSchema({
             if (required) {
                 if (requiredFieldErrorTranslationIds[id]) {
                     schema[id] = string()
-                        .nullable(false)
+                        .nullable()
                         .required(
                             language.translate(`payment.ratepay.errors.isRequired`, {
                                 fieldName: language.translate(requiredFieldErrorTranslationIds[id]),
@@ -29,7 +29,7 @@ export default memoize(function getPaypalCommerceRatePayValidationSchema({
 
                     if (id === 'ratepayPhoneCountryCode') {
                         schema[id] = schema[id].matches(
-                            /\d{2}/,
+                            /^\+\d{2,}$/,
                             language.translate('payment.ratepay.errors.isInvalid', {
                                 fieldName: language.translate('payment.ratepay.phone_country_code'),
                             }),
@@ -38,7 +38,7 @@ export default memoize(function getPaypalCommerceRatePayValidationSchema({
 
                     if (id === 'ratepayPhoneNumber') {
                         schema[id] = schema[id].matches(
-                            /^\d{8,11}$/,
+                            /^\d{7,11}$/,
                             language.translate('payment.ratepay.errors.isInvalid', {
                                 fieldName: language.translate('payment.ratepay.phone_number'),
                             }),
@@ -49,6 +49,6 @@ export default memoize(function getPaypalCommerceRatePayValidationSchema({
 
             return schema;
             // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        }, {} as { [key: string]: StringSchema }),
+        }, {} as { [key: string]: StringSchema<string | null> }),
     );
 });

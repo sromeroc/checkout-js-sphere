@@ -27,6 +27,7 @@ export const SUPPORTED_METHODS: string[] = [
     'googlepayauthorizenet',
     'googlepaybnz',
     'googlepaybraintree',
+    'googlepaypaypalcommerce',
     'googlepaycheckoutcom',
     'googlepaycybersourcev2',
     'googlepayorbital',
@@ -44,6 +45,7 @@ export interface CheckoutButtonListProps {
     deinitialize(options: CustomerRequestOptions): void;
     initialize(options: CustomerInitializeOptions): void;
     onError?(error: Error): void;
+    onClick?(methodId: string): void;
 }
 
 export const filterUnsupportedMethodIds = (methodIds:string[]): string[] => {
