@@ -22,6 +22,7 @@ import PaymentRedeemables from './PaymentRedeemables';
 import PaymentSubmitButton from './PaymentSubmitButton';
 import SpamProtectionField from './SpamProtectionField';
 import { StoreCreditField, StoreCreditOverlay } from './storeCredit';
+import CulqiPaymentMethod from './paymentMethod/culqi/CulqiPaymentMethod';
 
 export interface PaymentFormProps {
     availableStoreCredit?: number;
@@ -114,6 +115,15 @@ const PaymentForm: FunctionComponent<
         );
     }
 
+    /**
+     * Metodo de configuracion para Culqui
+     */
+    const handleCulqiSelect = () => {
+       console.log( `Se esta seleccionando el evento de culqui` );
+       console.log( methods, values );
+       
+};
+
     return (
         <Form className="checkout-form" testId="payment-form">
             {usableStoreCredit > 0 && (
@@ -137,6 +147,8 @@ const PaymentForm: FunctionComponent<
                 resetForm={resetForm}
                 values={values}
             />
+
+            <CulqiPaymentMethod onSelect={handleCulqiSelect} /> 
 
             <PaymentRedeemables />
 

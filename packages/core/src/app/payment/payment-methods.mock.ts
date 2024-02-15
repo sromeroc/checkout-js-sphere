@@ -25,6 +25,25 @@ export function getPaymentMethod(): PaymentMethod {
     };
 }
 
+export function getPaymentMethodCulqi(): PaymentMethod {
+    return {
+        id: 'culqi',
+        config: {
+            displayName: 'Pagar con Culqi',
+            hasDefaultStoredInstrument: false,
+            helpText: "",
+            testMode: false
+        },
+        method: 'custom',
+        supportedCards: ['VISA', 'AMEX', 'MC'],
+        type: "PAYMENT_TYPE_API",
+        logoUrl: "",
+        initializationStrategy: {
+            type: "not_applicable"
+        }
+    };
+}
+
 export function getPaypalCreditPaymentMethod(): PaymentMethod {
     return {
         config: {},

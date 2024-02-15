@@ -41,13 +41,33 @@ const PaymentMethodList: FunctionComponent<
     onSelect = noop,
     onUnhandledError,
 }) => {
+    
+    const methodsModificados = [...methods, {
+        id: 'culqi',
+        config: {
+            displayName: 'Pagar con Culqi',
+            hasDefaultStoredInstrument: false,
+            helpText: "",
+            testMode: true
+        },
+        method: 'hosted',
+        supportedCards: ['VISA', 'MC'],
+        type: "PAYMENT_TYPE_SDK",
+        logoUrl: "",
+        initializationStrategy: {
+            type: "none"
+        }
+    }];
+
     const handleSelect = useCallback(
         (value: string) => {
-            onSelect(getPaymentMethodFromListValue(methods, value));
+            // onSelect(getPaymentMethodFromListValue(methods, value));
+            onSelect(getPaymentMethodFromListValue(methodsModificados, value));
         },
         [methods, onSelect],
     );
 
+    console.log( methodsModificados );
     return (
         <Checklist
             defaultSelectedItemId={values.paymentProviderRadio}
@@ -55,7 +75,7 @@ const PaymentMethodList: FunctionComponent<
             name="paymentProviderRadio"
             onSelect={handleSelect}
         >
-            {methods.map((method) => {
+            {methodsModificados.map((method) => {
                 const value = getUniquePaymentMethodId(method.id, method.gateway);
                 const showOnlyOnMobileDevices = get(
                     method,
